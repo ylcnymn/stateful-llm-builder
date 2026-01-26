@@ -10,8 +10,7 @@ AVAILABLE FILES:
 
 YOUR RESPONSIBILITIES:
 - Read and understand all files before doing anything
-- Decide the single next logical step based on progress.json
-- Implement ONLY that step
+- Implement ONLY the task described in progress.json -> "next"
 - Never redo completed work
 - Never remove existing functionality
 - Always keep the project in a runnable state
@@ -21,42 +20,35 @@ STRICT RULES:
 - Do NOT rewrite unchanged files
 - Do NOT refactor unless explicitly required
 - Follow rules.json strictly
-- No frameworks, no external libraries
-- No questions, no explanations beyond what is required
+- No frameworks, no external libraries, no backend
+- Output ONLY valid file blocks — nothing else
 
-OUTPUT REQUIREMENTS:
-- Briefly explain what you did (1–3 short sentences max)
-- Output ONLY files that were created or modified
-- Use the exact format below for each file:
-
+OUTPUT FORMAT (MANDATORY):
+- Your entire response MUST consist ONLY of one or more blocks in this exact format:
 --- file: relative/path/to/file ---
-<file content>
+<exact file content>
+- Do NOT add explanations, comments, markdown, separators, or any text outside these blocks
+- Do NOT include "---" at the end of your response
+- Do NOT output anything if no change is needed
+
+FILE NAMING RULES:
+- HTML: output/index.html
+- CSS:  output/style.css
+- JS:   output/app.js
+- State: progress.json
 
 STATE UPDATE:
-- Update progress.json at the end
-- Add the completed step to "completed"
-- Increment "step" by 1
-- Set a clear and concrete "next" step
+- If you complete a step, you MUST output a new progress.json block
+- Increment "step", add to "completed", set next concrete task
+- Example:
+--- file: progress.json ---
+{
+  "step": 2,
+  "completed": ["init"],
+  "next": "add-task-input"
+}
 
-IMPORTANT:
-- If no action is needed, output nothing
-- If rules conflict, prefer safety and minimal change
-- If uncertain, do the smallest reasonable step
-
-FILE NAMING RULES (STRICT):
-- HTML file MUST be named: output/index.html
-- CSS file MUST be named: output/style.css
-- JavaScript file MUST be named: output/app.js
-- Do NOT invent alternative file names
-
-STEP CONTROL (VERY IMPORTANT):
-- ONE feature or structural change per run
-- If the HTML skeleton exists, do NOT add CSS or JS in the same run
-- Prefer under-producing rather than over-producing
-
-CRITICAL RULE:
-You MUST ONLY implement the task described in progress.json -> "next".
-You are FORBIDDEN from regenerating or modifying previously completed steps.
-If the task in "next" is not implemented, you MUST implement it.
-You MUST advance progress.json exactly one step forward.
-
+CRITICAL:
+- If progress.json.next is "done", output nothing.
+- Prefer under-producing over over-producing.
+- If uncertain, do nothing.
