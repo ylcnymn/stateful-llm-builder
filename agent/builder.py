@@ -1,5 +1,6 @@
 import json
 import subprocess
+import os
 from pathlib import Path
 from datetime import datetime
 import re
@@ -12,7 +13,7 @@ LOGS = BASE / "logs"
 OUTPUT.mkdir(exist_ok=True)
 LOGS.mkdir(exist_ok=True)
 
-MODEL = "qwen3-coder:480b-cloud"
+MODEL = os.getenv("BUILDER_MODEL", "qwen3-coder:480b-cloud")
 
 
 def read_file(path: Path) -> str:
@@ -22,13 +23,21 @@ def read_file(path: Path) -> str:
 
 
 def call_ollama(prompt: str) -> str:
+    env = os.environ.copy()
+    env["LANG"] = "C.UTF-8"
     result = subprocess.run(
         ["ollama", "run", MODEL],
         input=prompt,
         text=True,
         encoding="utf-8",
-        capture_output=True
+        capture_output=True,
+        env=env,
     )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Ollama failed with code {result.returncode}:\n"
+            f"STDERR: {result.stderr}\nSTDOUT: {result.stdout}"
+        )
     return result.stdout
 
 
@@ -53,11 +62,31 @@ FILE_BLOCK_RE = re.compile(
 )
 
 
+def clean_llm_output(raw: str) -> str:
+    """Remove trailing standalone '---' lines that are not part of a file block."""
+    lines = raw.splitlines()
+    while lines and lines[-1].strip() == "---":
+        lines.pop()
+    return "\n".join(lines)
+
+
 def parse_files(llm_output: str):
-    return [
-        (match.group("path").strip(), match.group("content").rstrip())
-        for match in FILE_BLOCK_RE.finditer(llm_output)
-    ]
+    blocks = []
+    for match in FILE_BLOCK_RE.finditer(llm_output):
+        rel_path = match.group("path").strip()
+        content = match.group("content").rstrip()
+
+        # Skip obviously empty or placeholder content
+        if not content.strip():
+            continue
+
+        # Security: reject paths with traversal or absolute indicators
+        if ".." in rel_path or rel_path.startswith("/") or ":" in rel_path:
+            print(f"Skipped unsafe path: {rel_path}")
+            continue
+
+        blocks.append((rel_path, content))
+    return blocks
 
 
 def write_files(file_blocks):
@@ -65,6 +94,7 @@ def write_files(file_blocks):
     for rel_path, content in file_blocks:
         target = BASE / rel_path
 
+        # Enforce write whitelist
         if not (
             rel_path.startswith("output/")
             or rel_path == "progress.json"
@@ -86,11 +116,16 @@ def log_run(text: str):
 
 def main():
     prompt = build_prompt()
-    llm_output = call_ollama(prompt)
+    try:
+        raw_output = call_ollama(prompt)
+        cleaned_output = clean_llm_output(raw_output)
+    except Exception as e:
+        log_run(f"ERROR: {e}")
+        raise
 
-    log_run(llm_output)
+    log_run(cleaned_output)
 
-    file_blocks = parse_files(llm_output)
+    file_blocks = parse_files(cleaned_output)
 
     if not file_blocks:
         print("No files to write. Agent did nothing.")
