@@ -1,0 +1,17 @@
+{
+  "stack": ["html", "css", "vanilla-js"],
+  "constraints": {
+    "noFramework": true,
+    "noExternalLib": true,
+    "singlePage": true
+  },
+  "style": {
+    "clean": true,
+    "commented": true,
+    "smallFunctions": true
+  },
+  "ui": {
+    "theme": "light",
+    "language": "en"
+  }
+}
